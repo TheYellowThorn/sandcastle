@@ -13,9 +13,9 @@ package com.terrainbuilder.events
 	{
 		private var _relatedObject:* = null;
 		
-		public static const ON_TERRAIN_BLOCK_UPDATED 					:String = "onTerrainBlockUpdated";
-		public static const ON_ELEVATION_COMPLETE 						:String = "onElevationComplete";
-		public static const ON_WATER_ELEVATION_COMPLETE 				:String = "onWaterElevationComplete";
+		public static const ON_TERRAIN_BLOCK_UPDATED:String = "onTerrainBlockUpdated";
+		public static const ON_ELEVATION_COMPLETE:String = "onElevationComplete";
+		public static const ON_WATER_ELEVATION_COMPLETE:String = "onWaterElevationComplete";
 
 		public function TerrainBlockEvent( type:String, bubbles:Boolean=false, cancelable:Boolean=false)
 		{

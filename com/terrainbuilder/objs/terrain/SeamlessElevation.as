@@ -39,12 +39,12 @@ package com.terrainbuilder.objs.terrain
 		public var baseActualVertices : Vector.<Number> = new Vector.<Number>();
 		public var baseVertices : Vector.<Number> = new Vector.<Number>();
 		
-        private var _segmentsW : uint;
-        private var _segmentsH : uint;
-        private var _width : Number;
+		private var _segmentsW : uint;
+		private var _segmentsH : uint;
+		private var _width : Number;
 		private var _height : Number;
 		private var _depth : Number;
-        private var _heightMap : BitmapData;
+		private var _heightMap : BitmapData;
 		private var _heightMapData:Vector.<uint>;
 		private var _heightMapWidth:uint;
 		private var _heightMapHeight:uint;
@@ -1383,7 +1383,7 @@ package com.terrainbuilder.objs.terrain
 			cross1.y = swizZ;
 			cross1.z = swizY;
 
-			return new cross1;
+			return cross1;
 		}
 		
 		public function setForRender():void {
