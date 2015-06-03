@@ -1,4 +1,4 @@
-/*
+﻿/*
 
 Copyright 2015 Michael Gouwens and The Yellow Thorn. All Rights Reserved.
 
@@ -138,7 +138,7 @@ package com.terrainbuilder.objs.terrain
 
 			if (_seamlessElevationData.geometry) {
 				_lowestColor = seamlessElevationData.lowestColor;
-				_subGeometry = _seamlessElevationData.geometry.subGeometries[0];
+				_subGeometry = _seamlessElevationData.geometry.subGeometries[0] as SubGeometry;
 			} else {
 				_subGeometry =  new SubGeometry();
 			}
