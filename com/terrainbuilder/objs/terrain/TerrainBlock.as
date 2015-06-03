@@ -514,7 +514,7 @@ package com.terrainbuilder.objs.terrain
 		public function get foamBitmapData():BitmapData { return _foamBitmapData; }
 		public function set foamBitmapData(value:BitmapData):void { 
 			_foamBitmapData = value; 
-			if (waterMaskMethod) { waterMaskMethod.whiteCapTexture = new BitmapTexture(new _foamBitmapData); }
+			if (waterMaskMethod) { waterMaskMethod.whiteCapTexture = new BitmapTexture(_foamBitmapData); }
 		}
 		public function get waterHeight():uint { return _waterHeight; }
 		public function get currentElevationCreationIndex():uint { return _currentElevationCreationIndex; }

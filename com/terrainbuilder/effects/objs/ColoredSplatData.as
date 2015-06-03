@@ -11,18 +11,7 @@ package com.terrainbuilder.effects.objs
 
 	public class ColoredSplatData extends SplatData
 	{
-		private var _splatURL:String;
-		private var _blendURL:String;
-		private var _normalMapURL:String;
-		private var _splat:BitmapData;
-		private var _blend:BitmapData;
-		private var _normalMap:BitmapData;
-		private var _color:uint;
-		private var _heightMapRange:Array;
-		private var _useSlopeBlend:Boolean = false;
-		private var _maxOpacityAngle:Number = 0.45;
-		private var _opacityAngleSpreadRange:Number = 0.3;
-		private var _visible:Boolean = true;
+		
 		
 		/** splat is the greyscale image used for splat texture **/
 		/** blend is the greyscale map used for blending the splat onto the texture **/
