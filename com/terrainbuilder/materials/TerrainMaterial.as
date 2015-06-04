@@ -1,4 +1,4 @@
-/*
+﻿/*
 
 Copyright 2015 Michael Gouwens and The Yellow Thorn. All Rights Reserved.
 
@@ -95,7 +95,7 @@ package com.terrainbuilder.materials
 			
 			for (var i:uint = 0; i<_passes.length; i++) {
 				if (_passes[i] is TerrainPass) {
-					var pass:TerrainPass = _passes[i];
+					var pass:TerrainPass = TerrainPass(_passes[i]);
 					for (var j:uint = 0; j<pass.splatDatas.length; j++) {
 						if (pass.splatDatas[j].blend == blend) {
 							pass.updateBlend(j, blend);
