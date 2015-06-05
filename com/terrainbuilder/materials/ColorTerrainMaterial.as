@@ -14,8 +14,11 @@ package com.terrainbuilder.materials
 	import com.terrainbuilder.objs.terrain.SeamlessElevationData;
 	
 	import flash.display.BitmapData;
+	import flash.events.Event;
 	
+	import away3d.arcane;
 	import away3d.materials.MaterialBase;
+	import away3d.materials.lightpickers.LightPickerBase;
 	import away3d.materials.passes.MaterialPassBase;
 
 	public class ColorTerrainMaterial extends MaterialBase
@@ -317,5 +320,19 @@ package com.terrainbuilder.materials
 			_terrainMethodData.addFogInFinalTerrainPass = value; 
 			updatePasses();
 		}
+		
+		public override function set lightPicker(value:LightPickerBase):void
+		{
+			if (value != _lightPicker) {
+				_lightPicker = value;
+				var len:uint = _passes.length;
+				for (var i:uint = 0; i < len; ++i)
+					_passes[i].lightPicker = _lightPicker;
+			}
+		
+			_terrainMethodData.useLights = value !== null;
+			updatePasses();
+		}
+		
 	}
 }

@@ -37,6 +37,7 @@ package com.terrainbuilder.materials.objs
 		private var _addFogInFinalTerrainPass:Boolean = true;
 		private var _showShadows:Boolean = false;
 		private var _shadowAlpha:Number = 0.5;
+		private var _useLights:Boolean = true;
 		
 		/** splat is the image used for splat texture (greyscale for ColoredSplatData and full-colored for SplatData) **/
 		/** blend is the greyscale map used for blending the splat onto the texture **/
@@ -121,6 +122,9 @@ package com.terrainbuilder.materials.objs
 		
 		public function get showShadows():Boolean { return  _showShadows; }
 		public function set showShadows(value:Boolean):void {  _showShadows = value; }
+		
+		public function get useLights():Boolean { return  _useLights; }
+		public function set useLights(value:Boolean):void {  _useLights = value; }
 		
 		public function get shadowAlpha():Number { return _shadowAlpha; }
 		public function set shadowAlpha(value:Number):void { _shadowAlpha = value; }

@@ -16,6 +16,7 @@ package com.terrainbuilder.materials
 	import flash.display.BitmapData;
 	
 	import away3d.materials.MaterialBase;
+	import away3d.materials.lightpickers.LightPickerBase;
 	import away3d.materials.passes.MaterialPassBase;
 
 	public class TerrainMaterial extends MaterialBase
@@ -313,6 +314,19 @@ package com.terrainbuilder.materials
 		public function get addFogInFinalTerrainPass():Boolean { return _terrainMethodData.addFogInFinalTerrainPass; }
 		public function set addFogInFinalTerrainPass(value:Boolean):void { 
 			_terrainMethodData.addFogInFinalTerrainPass = value; 
+			updatePasses();
+		}
+		
+		public override function set lightPicker(value:LightPickerBase):void
+		{
+			if (value != _lightPicker) {
+				_lightPicker = value;
+				var len:uint = _passes.length;
+				for (var i:uint = 0; i < len; ++i)
+					_passes[i].lightPicker = _lightPicker;
+			}
+			
+			_terrainMethodData.useLights = value !== null;
 			updatePasses();
 		}
 	}

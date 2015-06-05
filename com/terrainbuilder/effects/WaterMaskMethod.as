@@ -270,12 +270,14 @@ package com.terrainbuilder.effects
 			code += "sub " + temp + ".xyz, " + temp + ".xyz, " + temp3 + ".xyz\n";
 			code += "mul " + temp + ".xyz, " + temp + ".xyz, " + temp2 + ".x\n";
 
+			if (_lightPicker) {
+				code += "dp3 " + temp2 + ".z, " + constRegister6 + ".xyz, " + _sharedRegisters.normalVarying + ".xyz\n"; // standard dot3 lambert shading: d = max(0, dot3(light, normal))
+			}
 			
-			code += "dp3 " + temp2 + ".z, " + constRegister6 + ".xyz, " + _sharedRegisters.normalVarying + ".xyz\n"; // standard dot3 lambert shading: d = max(0, dot3(light, normal))
 			code += "mul " + temp + ".xyz, " + temp + ".xyz, " + temp2 + ".z\n";
-			
+				
 			code += "add " + targetReg + ".xyz, " + targetReg + ".xyz, " + temp + ".xyz\n";
-			
+				
 			code += "sub " + temp2 + ".x, " + constRegister + ".y, " + temp2 + ".x\n";
 			code += "sub " + temp2 + ".x, " + temp2 + ".x, " + constRegister5 + ".y\n";
 			code += "sat " + temp2 + ".x, " + temp2 + ".x\n";
@@ -326,7 +328,10 @@ package com.terrainbuilder.effects
 			_positionOffsetX = _seamlessElevationData.positionOffsetX;
 			_positionOffsetZ = _seamlessElevationData.positionOffsetZ;
 		}
-		public function set lightPicker(value:StaticLightPicker):void { _lightPicker = value; }
+		public function set lightPicker(value:StaticLightPicker):void { 
+			_lightPicker = value; 
+			this.invalidateShaderProgram();
+		}
 		public function get lightPicker():StaticLightPicker { return _lightPicker; }
 		
 		public override function dispose():void {
@@ -337,6 +342,9 @@ package com.terrainbuilder.effects
 			if (_whiteCapTextureBitmapData) _whiteCapTextureBitmapData.dispose();
 			if (_whiteCapTexture) _whiteCapTexture.dispose();
 
+		}
+		public function invalidateShader():void {
+			this.invalidateShaderProgram();
 		}
 	}
 }

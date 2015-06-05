@@ -25,6 +25,7 @@ package com.terrainbuilder.materials.passes
 	import away3d.core.base.IRenderable;
 	import away3d.core.managers.Stage3DProxy;
 	import away3d.lights.DirectionalLight;
+	import away3d.materials.lightpickers.LightPickerBase;
 	import away3d.materials.passes.MaterialPassBase;
 	import away3d.textures.BitmapTexture;
 	import away3d.textures.Texture2DBase;
@@ -429,7 +430,7 @@ package com.terrainbuilder.materials.passes
 					code += "mov ft4.xyz, fc" + (terrainConstantIndex + 3).toString() + ".yzy\n";
 					code += "dp3 ft4.w, v1.xyz, ft4.xyz\n"; //RETURNS THE PERCENTAGE OF THE ANGLE BETWEEN 0 and 1
 					
-					code += "mov ft4.xz, " + currSlopeRegister + "." + comp + "\n";
+					code += "mov ft4.xz, " + currSlopeRegister + "." + comp + comp + "\n";
 					code += "mul ft4.xz, ft4.xz, fc" + (terrainConstantIndex + 1).toString() + ".xz\n";
 					code += "frc ft4.xz, ft4.xz\n";
 					
@@ -487,50 +488,51 @@ package com.terrainbuilder.materials.passes
 					code += "add ft2.xy, ft2.xy, ft6.xy\n";
 					code += "nrm ft2.xyz, ft2.xyz\n";
 			}
-			
-			for (i = 0; i<_terrainMethodData.numLights; i++) {
-				var lightIndex:uint = i * 2 + specularRegisters;
-				comp = comps[i % 4];
-				code += "dp3 ft3." + comp + ", fc" + lightIndex + ".xyz, ft2.xyz\n"; // standard dot3 lambert shading: d = max(0, dot3(light, normal))
+			if (_terrainMethodData.useLights) {
 				
-				code += "max ft3." + comp + ", ft3." + comp + ", fc" + (terrainConstantIndex + 3).toString() + ".y\n";  // fc0.w contains 0, so this clamps to 0
+				for (i = 0; i<_terrainMethodData.numLights; i++) {
+					var lightIndex:uint = i * 2 + specularRegisters;
+					comp = comps[i % 4];
+					code += "dp3 ft3." + comp + ", fc" + lightIndex + ".xyz, ft2.xyz\n"; // standard dot3 lambert shading: d = max(0, dot3(light, normal))
+					
+					code += "max ft3." + comp + ", ft3." + comp + ", fc" + (terrainConstantIndex + 3).toString() + ".y\n";  // fc0.w contains 0, so this clamps to 0
+					
+					if (i == 0) { code += "mov ft5.xyz, ft0.xyz\n"; }
+					
+					//CALCULATE DIFFUSE
+					code += "mov ft4.xyz, fc" + (lightIndex).toString() + ".www\n";
+					code += "mul ft4.xyz, ft4.xyz, fc" + (terrainConstantIndex + 1).toString() + ".xyz\n";
+					code += "frc ft4.xyz, ft4.xyz\n";
+					code += "mul ft4.xyz, ft4.xyz, fc" + (terrainConstantIndex).toString() + ".y\n";
+					code += "mul ft4.xyz, ft4.xyz, fc" + (terrainConstantIndex + 2).toString() + ".x\n"; //Diffuse Strength
+					
+					code += "mul ft4.xyz, ft4.xyz, ft3." + comp + "\n";
+					
+					if (i == 0) { code += "mov ft1.xyz, ft0.xyz\n"; }
+					else { code += "mov ft1.xyz, ft5.xyz\n"; }
+					
+					code += "mul ft1.xyz, ft1.xyz, ft4.xyz\n";
+					code += "add ft1.xyz, ft1.xyz, fc" + (lightIndex + 1).toString() + ".xyz\n";
+					
+					if (i == 0) { code += "mov ft0.xyz, ft1.xyz\n"; }
+					else {  code += "add ft0.xyz, ft0.xyz, ft1.xyz\n"; }
+					
+				}
 				
-				if (i == 0) { code += "mov ft5.xyz, ft0.xyz\n"; }
-				
-				//CALCULATE DIFFUSE
-				code += "mov ft4.xyz, fc" + (lightIndex).toString() + ".www\n";
-				code += "mul ft4.xyz, ft4.xyz, fc" + (terrainConstantIndex + 1).toString() + ".xyz\n";
-				code += "frc ft4.xyz, ft4.xyz\n";
-				code += "mul ft4.xyz, ft4.xyz, fc" + (terrainConstantIndex).toString() + ".y\n";
-				code += "mul ft4.xyz, ft4.xyz, fc" + (terrainConstantIndex + 2).toString() + ".x\n"; //Diffuse Strength
-				
-				code += "mul ft4.xyz, ft4.xyz, ft3." + comp + "\n";
-				
-				if (i == 0) { code += "mov ft1.xyz, ft0.xyz\n"; }
-				else { code += "mov ft1.xyz, ft5.xyz\n"; }
-				
-				code += "mul ft1.xyz, ft1.xyz, ft4.xyz\n";
-				code += "add ft1.xyz, ft1.xyz, fc" + (lightIndex + 1).toString() + ".xyz\n";
-				
-				if (i == 0) { code += "mov ft0.xyz, ft1.xyz\n"; }
-				else {  code += "add ft0.xyz, ft0.xyz, ft1.xyz\n"; }
-				
+				//START SPECULAR
+				lightIndex = 0 + specularRegisters;
+				code += "dp3 ft3.x, fc" + lightIndex + ".xyz, ft2.xyz\n"; // standard dot3 lambert shading: d = max(0, dot3(light, normal))
+				code += "sat ft3.x, ft3.x\n";
+				code += "pow ft3.x, ft3.x, fc0.x\n";
+				code += "mov ft2.xyz, fc0.www\n";
+				code += "mul ft2.xyz, ft2.xyz, fc" + (terrainConstantIndex + 1).toString() + ".xyz\n";
+				code += "frc ft2.xyz, ft2.xyz\n";
+				code += "mul ft2.xyz, ft2.xyz, fc" + (terrainConstantIndex).toString() + ".yyy\n";
+				code += "mul ft2.xyz, ft2.xyz, ft3.x\n";
+				code += "mul ft2.xyz, ft2.xyz, fc0.y\n";
+				code += "add ft0.xyz, ft0.xyz, ft2.xyz\n";
+				//END SPECULAR
 			}
-			
-			//START SPECULAR
-			lightIndex = 0 + specularRegisters;
-			code += "dp3 ft3.x, fc" + lightIndex + ".xyz, ft2.xyz\n"; // standard dot3 lambert shading: d = max(0, dot3(light, normal))
-			code += "sat ft3.x, ft3.x\n";
-			code += "pow ft3.x, ft3.x, fc0.x\n";
-			code += "mov ft2.xyz, fc0.www\n";
-			code += "mul ft2.xyz, ft2.xyz, fc" + (terrainConstantIndex + 1).toString() + ".xyz\n";
-			code += "frc ft2.xyz, ft2.xyz\n";
-			code += "mul ft2.xyz, ft2.xyz, fc" + (terrainConstantIndex).toString() + ".yyy\n";
-			code += "mul ft2.xyz, ft2.xyz, ft3.x\n";
-			code += "mul ft2.xyz, ft2.xyz, fc0.y\n";
-			code += "add ft0.xyz, ft0.xyz, ft2.xyz\n";
-			//END SPECULAR
-			
 			// START FOG SHADER
 			if (_addFog) {
 				
@@ -565,24 +567,26 @@ package com.terrainbuilder.materials.passes
 		 */
 		override arcane function activate(stage3DProxy : Stage3DProxy, camera : Camera3D) : void
 		{
-			var totalDirectionalLights:uint = _lightPicker.castingDirectionalLights.length > 0 ? _lightPicker.castingDirectionalLights.length : _lightPicker.directionalLights.length;
-			
-			for (var i:uint = 0; i<_lightPicker.castingDirectionalLights.length; i++) {
-				if (_directionalLights.length < 2) {
-					if (_directionalLights.indexOf(_lightPicker.castingDirectionalLights[i]) == -1) {
-						_directionalLights.push(_lightPicker.castingDirectionalLights[i]);
+			if (_lightPicker) {
+				var totalDirectionalLights:uint = _lightPicker.castingDirectionalLights.length > 0 ? _lightPicker.castingDirectionalLights.length : _lightPicker.directionalLights.length;
+				
+				for (var i:uint = 0; i<_lightPicker.castingDirectionalLights.length; i++) {
+					if (_directionalLights.length < 2) {
+						if (_directionalLights.indexOf(_lightPicker.castingDirectionalLights[i]) == -1) {
+							_directionalLights.push(_lightPicker.castingDirectionalLights[i]);
+						}
+					}
+				}
+				for (i = 0; i<_lightPicker.directionalLights.length; i++) {
+					if (_directionalLights.length < 2) {
+						if (_directionalLights.indexOf(_lightPicker.directionalLights[i]) == -1) {
+							_directionalLights.push(_lightPicker.directionalLights[i]);
+						}
 					}
 				}
 			}
-			for (i = 0; i<_lightPicker.directionalLights.length; i++) {
-				if (_directionalLights.length < 2) {
-					if (_directionalLights.indexOf(_lightPicker.directionalLights[i]) == -1) {
-						_directionalLights.push(_lightPicker.directionalLights[i]);
-					}
-				}
-			}
 			
-			_terrainMethodData.numLights = _directionalLights.length;
+			_terrainMethodData.numLights = _lightPicker ? _directionalLights.length : 0;
 			
 			if (_useOverlayBlend) {
 				_blendFactorSource = Context3DBlendFactor.SOURCE_ALPHA;
@@ -667,7 +671,7 @@ package com.terrainbuilder.materials.passes
 			_fragmentData[index + 6] = 1 / 1000;
 			_fragmentData[index + 7] = _terrainMethodData.normalMapStrength < 0 ? 0 : _terrainMethodData.normalMapStrength;
 			
-			_fragmentData[index + 8] = light1.diffuse;
+			_fragmentData[index + 8] = _lightPicker ? light1.diffuse : 0;
 			_fragmentData[index + 9] = _terrainMethodData.squaredTiles;
 			_fragmentData[index + 10] = _terrainMethodData.tileSize * _terrainMethodData.squaredTiles;
 			_fragmentData[index + 11] = _terrainMethodData.tileSize * (_terrainMethodData.squaredTiles / 2);
@@ -760,5 +764,9 @@ package com.terrainbuilder.materials.passes
 		
 		public function get hasNormalMaps():Boolean { return _hasNormalMaps; }
 		public function get splatDatas():Vector.<SplatData> { return _splatDatas; }
+		
+		public function set lightPicker(value:LightPickerBase):void {
+			_lightPicker = value;
+		}
 	}
 }

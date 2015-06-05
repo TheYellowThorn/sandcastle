@@ -188,7 +188,9 @@ package com.terrainbuilder.effects {
 
 			code += "m33 " + temp + ".xyz, " + temp + ".xyz, vc8\n";
 			
-			code += "mov " + _sharedRegisters.normalVarying + ".xyz, " + temp + ".xyz\n";
+			if (vo.numLights > 0) {
+				code += "mov " + _sharedRegisters.normalVarying + ".xyz, " + temp + ".xyz\n";
+			}
 			
 			regCache.removeVertexTempUsage(temp);
 			regCache.removeVertexTempUsage(temp2);
@@ -304,6 +306,10 @@ package com.terrainbuilder.effects {
 		public function set seamlessElevationData(value:SeamlessElevationData):void { _seamlessElevationData = value; }
 		public function get displacementMultiplier():Number { return _displacementMultiplier; }
 		public function set displacementMultiplier(value:Number):void { _displacementMultiplier = value; }
+		
+		public function invalidateShader():void {
+			this.invalidateShaderProgram();
+		}
 		
 		public override function dispose():void {
 			super.dispose();

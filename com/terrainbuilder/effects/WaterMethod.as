@@ -212,8 +212,12 @@ package com.terrainbuilder.effects
 					code += "add " + temp2 + ".xyz, " + temp2 + ".xyz, " + temp + ".xyz\n";
 					
 				}
-				
-			code += "mul " + targetReg + ".xyz, " + temp2 + ".xyz, " + targetReg + ".xyz\n";// +
+			
+			if (vo.numLights > 0) {
+				code += "mul " + targetReg + ".xyz, " + temp2 + ".xyz, " + targetReg + ".xyz\n";// +
+			} else {
+				code += "add " + targetReg + ".xyz, " + temp2 + ".xyz, " + targetReg + ".xyz\n";// +
+			}
 			code +=	"mov " + targetReg + ".w, " + temp + ".w\n";// + 
 			
 			if (uv) regCache.removeFragmentTempUsage(uv);
@@ -339,6 +343,9 @@ package com.terrainbuilder.effects
 			
 			if (_overlayBitmapData) _overlayBitmapData.dispose();
 			if (_overlayTexture) _overlayTexture.dispose();
+		}
+		public function invalidateShader():void {
+			this.invalidateShaderProgram();
 		}
 	}
 }
