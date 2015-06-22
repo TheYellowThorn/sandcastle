@@ -6,8 +6,8 @@ Live Flash Demo: http://www.theyellowthorn.com/sandcastle/demo
 
 Short-list Features video: https://www.youtube.com/watch?v=pw7CxRP4_O8
 
-FACEBOOK: https://www.facebook.com/sandcastleapp
-
 TWITTER: https://twitter.com/TheYellowThorn
+
+FACEBOOK: https://www.facebook.com/sandcastleapp
 
 YOUTUBE: https://www.youtube.com/user/theyellowthorn
