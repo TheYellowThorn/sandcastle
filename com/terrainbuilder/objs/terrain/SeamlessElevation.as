@@ -298,13 +298,21 @@ package com.terrainbuilder.objs.terrain
 		}
 		
 		
-		public function getHeightAt(x : Number, z : Number) : Number
+		public function getHeightAt(x:Number, y:Number):Number {
+			
+			var colorHeight:uint = getColorHeightAt(x, y);
+			var hgt:Number = (colorHeight / 0xFF) * (Number(_seamlessElevationData.height)) * (_seamlessElevationData.height / _seamlessElevationData.width);
+			return hgt;
+			
+		}
+		
+		public function getColorHeightAt(x : Number, y : Number) : Number
 		{
 			var col : Number
-			var colHeight:Number = _heightMapData[ uint(x) +  uint(z)*(_segmentsW + 1)];
+			var colHeight:Number = _heightMapData[ uint(x) +  uint(y)*(_segmentsW + 1)];
 			col = ((colHeight >> 16) & 0xff) * 256;
 			col += ((colHeight >> 8) & 0xff);
-
+			
 			return col;
 		}
 		
