@@ -71,16 +71,9 @@ package com.terrainbuilder.materials.passes
 			
 			code += "mov vt0, va0\n";
 			
-			code += "m44 vt1, vt0, vc0 \n"; //global position
 			code += "m44 op, vt0, vc0 \n";
 			code += "m44 v2, vt0, vc4\n";
 			code += "mov v0, va1\n"; //uvs
-			
-			code += "mov vt0, va2\n"; // normals
-			code += "nrm vt0.xyz, vt0.xyz\n";
-			code += "mov v1, vt0\n"; // normals
-			
-			code += "mov v1, va0\n";
 			
 			return code;
 		}
