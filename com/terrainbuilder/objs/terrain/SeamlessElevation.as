@@ -325,156 +325,74 @@ package com.terrainbuilder.objs.terrain
 			return _hH1;
 		}
 		
-		public function getCoordinatesFromUV2(u:Number, v:Number):Vector3D {
+		public function getHeightFromUV(u:Number, v:Number):Number {
 			
-			if (u <= 0) u = 0.00001;
-			if (v >= 1) v = 0.99999;
+			if (u >= 1) u = 0.99999;
+			if (v <= 0) v = 0;
 			
-			var _w:Number = 1;
-			var _d:Number = 1;
-			var _h:Number = Number(_height) / Number(_width) * 1;
-			y = 1;
-			var newToXi:Number;
-			var newToZi:Number;
-			var tempX:Number;
-			var tempY:Number;
-			var _segW2:Number = _segmentsW - 2;
-			var _segH2:Number = _segmentsH - 2;
-			var _divisionRatio:Number = 1 / _faceDivision;
-			var _posXRatio:Number = _sectorPosition.x * _divisionRatio;
-			var _posYRatio:Number = _sectorPosition.y * _divisionRatio;
-			var segRatioW:Number = _divisionRatio / _segW2;
-			var segRatioH:Number = _divisionRatio / _segH2;
-			var _posXRatio5:Number = _posXRatio - 0.5;
-			var _posYRatio5:Number = _posYRatio - 0.5;
-			var uDiv : Number = (_heightMapWidth-1)/_segmentsW;
-			var vDiv : Number = (_heightMapHeight-1)/_segmentsH;
-			var col:uint;
-			var x2:Number;
-			var x25:Number;
-			var y2:Number;
-			var z2:Number;
-			var z25:Number;
-			var y25:Number;
-			var divMin1:uint = (_faceDivision - 1);
-			var p:Vector3D;
-			var _hH1:Number;
-			var _h1:Number;
-			var uRatio:Number;
-			var vRatio:Number;
-			var minXiIndex:uint;
-			var minZiIndex:uint;
-			var maxXiIndex:uint;
-			var maxZiIndex:uint;
-			
-					
-			newToXi = u * _segmentsW;
-			newToZi = v * _segmentsH;
-			
-			minXiIndex = Math.floor(u * _segmentsW);
-			minZiIndex = Math.floor(v * _segmentsH);
-			maxXiIndex = minXiIndex + 1;
-			maxZiIndex = minZiIndex + 1;
-			
-			uRatio = newToXi - minXiIndex;
-			vRatio = newToZi - minZiIndex;
-			
-					
-			tempX = ((Number(newToXi) - 1) * segRatioW) + _posXRatio5;
-			tempY = ((Number(newToZi) - 1) * segRatioH) + _posYRatio5;
-			
-			
-			x = tempX*_w;
-			z = tempY*_d;
-			
-			u = newToXi*uDiv;
-			v = (_segmentsH - newToZi) * vDiv;
-			
-			var colHeight:Number = _heightMapData[ uint(newToXi) +  uint(newToZi)*(_segmentsW + 1)];
-			col = ((colHeight >> 16) & 0xff) * 256;
-			col += ((colHeight >> 8) & 0xff);
-			
-			
-			if (( newToXi == 0 && _sectorPosition.x == 0) || ( newToXi == _segmentsW && _sectorPosition.x == divMin1) || (newToZi == 0 && _sectorPosition.y == 0) || (newToZi == _segmentsH && _sectorPosition.y == divMin1)) {
-				if ( newToXi == 0 && _sectorPosition.x == 0) {
-					x += _w;
-					rotDegrees = 90;
-					axis = Vector3D.Z_AXIS;	
-				} else if ( newToXi == _segmentsW && _sectorPosition.x == divMin1) {
-					x -= _w;
-					rotDegrees = 270;
-					axis = Vector3D.Z_AXIS;	
-				} else if (newToZi == 0 && _sectorPosition.y == 0) {
-					z += _d;
-					rotDegrees = 270;
-					axis = Vector3D.X_AXIS;	
-				} else if (newToZi == _segmentsH && _sectorPosition.y == divMin1) {
-					z -= _d;
-					rotDegrees = 90;
-					axis = Vector3D.X_AXIS;	
-				} else {
-					rotDegrees = 0;
-					axis = Vector3D.Z_AXIS;	
-				}
-			} else {
-				rotDegrees = 0;
-				axis = Vector3D.Z_AXIS;	
-			}
-			
-			
-			x2 = x * x;
-			y2 = 1;
-			z2 = z * z;
-			x25 = x2 * 0.5;
-			z25 = z2 * 0.5;
-			y25 = 0.5;
-			
-			rotVec.x = x * Math.sqrt(0.5 - z25 + z2 / 3.0);
-			rotVec.y = y * Math.sqrt(1.0 - z25 - x25 + z2 * x2 / 3.0);
-			rotVec.z = z * Math.sqrt(0.5 - x25 + x2 / 3.0);
-			
-			if (rotDegrees !== 0) {
-				rotVec2.x = rotVec.x;
-				rotVec2.y = rotVec.y;
-				rotVec2.z = rotVec.z;
-				
-				p = rotatePointByAxis(rotVec2, rotDegrees, axis);
-				rotVec.x = p.x;
-				rotVec.y = p.y;
-				rotVec.z = p.z;
-			}
-
-			if (!_isOcean) { 
-				_h1 = (col > _maxElevation)? (_maxElevation / 256) * _h : ((col < _minElevation)?(_minElevation / 256) * _h :  (col / 256) * _h);
-			} else {
-				_h1 = ((col - .5) > _maxElevation)? (_maxElevation / 256) * _h : (((col - .5) < _minElevation)?(_minElevation / 256) * _h :  ((col - .5) / 256) * _h);
-			}
-			
-			_hH1 = (_baseExpand + _h1)*_width;
-			
-			
-			rotPoint = rotVec;
-
-			return rotPoint;
-		
-		}
-		
-		public function getCoordinatesFromUV(u:Number, v:Number):Vector3D {
-			if (u >= 1) u = 0.99;
-			if (v <= 0) v = 0.01;
-			
-			var minXPos:uint = uint(u * (_visiblePoints - 1));
-			var minYPos:uint = uint((_visiblePoints - 1) - v * (_visiblePoints - 1));
-			
-			var xyPosition:Point = new Point(minXPos, minYPos);
+			var uPosition:Number = u * _visiblePoints;
+			var vPosition:Number = v * _visiblePoints;
+			var minXPos:uint = uint(uPosition);
+			var minYPos:uint = uint(_visiblePoints - vPosition);
 			
 			var verts:Vector.<Number> = this.geometry.subGeometries[0].vertexData;
 			var sqrt:uint = Math.sqrt(verts.length / 3);
 			
-			var index1:uint = xyPosition.x * 3 + sqrt*xyPosition.y * 3; //current index
-			var index2:uint = (xyPosition.x + 1) * 3 + sqrt * xyPosition.y * 3; //index to the right
-			var index3:uint = xyPosition.x * 3 + sqrt * (xyPosition.y + 1) * 3; //index above
-			var index4:uint = (xyPosition.x + 1) * 3 + sqrt * (xyPosition.y + 1) * 3; //index above and to right
+			var xyPosition:Point = new Point(minXPos, minYPos);
+			var xyPositionX3:Number = xyPosition.x * 3;
+			var xyPositionY3:Number = sqrt*xyPosition.y * 3;
+			var sqrt3:Number = sqrt * 3;
+			
+			var index1:uint = xyPosition.x * 3 + xyPositionY3; //current index
+			var index2:uint = (xyPosition.x + 1) * 3 + xyPositionY3; //index to the right
+			var index3:uint = xyPosition.x * 3 + xyPositionY3 + sqrt3; //index above
+			var index4:uint = (xyPosition.x + 1) * 3 + xyPositionY3 + sqrt3; //index above and to right
+			
+			var vec3D1y:Number = verts[index1 + 1];
+			var vec3D2y:Number = verts[index2 + 1];
+			var vec3D3y:Number = verts[index3 + 1];
+			var vec3D4y:Number = verts[index4 + 1];
+			
+			var uvXRatio:Number = 1 - (uPosition - Math.floor(uPosition));
+			var uvYRatio:Number = 1 - (vPosition - Math.floor(vPosition));
+			
+			var horizontalCrossVec1x:Number;
+			var horizontalCrossVec1y:Number;
+			var horizontalCrossVec1z:Number;
+			
+			
+			if (uvXRatio >= uvYRatio) { //x >= y triangle on right
+				horizontalCrossVec1y = vec3D2y + ((vec3D1y - vec3D2y) * uvXRatio) + ((vec3D4y - vec3D2y) * uvYRatio);
+			} else { //y > x triangle on left
+				horizontalCrossVec1y = vec3D2y + ((vec3D1y - vec3D2y) * uvXRatio) + ((vec3D4y - vec3D2y) * uvYRatio);
+			}
+			
+			var finalVerticalCrossVec:Vector3D = new Vector3D(horizontalCrossVec1x, horizontalCrossVec1y, horizontalCrossVec1z);
+			
+			return horizontalCrossVec1y;
+		}
+		
+		public function getCoordinatesFromUV(u:Number, v:Number):Vector3D {
+			if (u >= 1) u = 0.99999;
+			if (v <= 0) v = 0;
+			
+			var uPosition:Number = u * _visiblePoints;
+			var vPosition:Number = v * _visiblePoints;
+			var minXPos:uint = uint(uPosition);
+			var minYPos:uint = uint(_visiblePoints - vPosition);
+			
+			var verts:Vector.<Number> = this.geometry.subGeometries[0].vertexData;
+			var sqrt:uint = Math.sqrt(verts.length / 3);
+			
+			var xyPosition:Point = new Point(minXPos, minYPos);
+			var xyPositionX3:Number = xyPosition.x * 3;
+			var xyPositionY3:Number = sqrt*xyPosition.y * 3;
+			var sqrt3:Number = sqrt * 3;
+			
+			var index1:uint = xyPosition.x * 3 + xyPositionY3; //current index
+			var index2:uint = (xyPosition.x + 1) * 3 + xyPositionY3; //index to the right
+			var index3:uint = xyPosition.x * 3 + xyPositionY3 + sqrt3; //index above
+			var index4:uint = (xyPosition.x + 1) * 3 + xyPositionY3 + sqrt3; //index above and to right
 			
 			var vec3D1x:Number = verts[index1];
 			var vec3D1y:Number = verts[index1 + 1];
@@ -489,16 +407,13 @@ package com.terrainbuilder.objs.terrain
 			var vec3D4y:Number = verts[index4 + 1];
 			var vec3D4z:Number = verts[index4 + 2];
 			
-			var uvXRatio:Number = 1 - ((u * (_visiblePoints - 1)) - Math.floor(u * (_visiblePoints - 1)));
-			var uvYRatio:Number = 1 - ((v * (_visiblePoints - 1)) - Math.floor(v * (_visiblePoints - 1)));
+			var uvXRatio:Number = 1 - (uPosition - Math.floor(uPosition));
+			var uvYRatio:Number = 1 - (vPosition - Math.floor(vPosition));
 			
 			var horizontalCrossVec1x:Number;
 			var horizontalCrossVec1y:Number;
 			var horizontalCrossVec1z:Number;
-			var verticalCrossVec1x:Number;
-			var verticalCrossVec1y:Number;
-			var verticalCrossVec1z:Number;
-		
+			
 			
 			if (uvXRatio >= uvYRatio) { //x >= y triangle on right
 				horizontalCrossVec1x = vec3D2x + ((vec3D1x - vec3D2x) * uvXRatio) + ((vec3D4x - vec3D2x) * uvYRatio);
