@@ -20,6 +20,26 @@ package com.terrainbuilder.dynamicterrain.utils
 		{
 		}
 		
+		public function getHeightMapFrom16BitByteArray(byteArray:ByteArray):BitmapData {
+			
+			var size:uint = Math.sqrt(byteArray.length / 2);
+			var bitmapData:BitmapData = new BitmapData(size, size, true, 0);
+			
+			var byteArray2:ByteArray = new ByteArray();
+			for(var i:uint = 0; i<byteArray.length; i+=2) {
+				byteArray2.writeByte(0xFF);
+				byteArray2.writeByte(byteArray[i]);
+				byteArray2.writeByte(byteArray[i+1]);
+				byteArray2.writeByte(0);
+			}
+			byteArray2.position = 0;
+			
+			bitmapData.setPixels(bitmapData.rect, byteArray2);
+			
+			return bitmapData;
+			
+		}
+		
 		public function getBitmapDataFromByteArray(byteArray:ByteArray):BitmapData {
 			
 			var size:uint = Math.sqrt(byteArray.length / 4);
