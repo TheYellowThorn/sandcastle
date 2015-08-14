@@ -325,6 +325,83 @@ package com.terrainbuilder.objs.terrain
 			return _hH1;
 		}
 		
+		/**
+		 * Returns a steepness percentage. 0 is parallel and 1 is perpendicular.
+		 */
+		public function getNormalSteepnessFromUV(u:Number, v:Number):Number {
+			
+			var normal:Vector3D = getNormalFromUV(u, v);
+			normal.normalize();
+			
+			var verticalNormal:Vector3D = new Vector3D(0, 1, 0);
+			
+			return normal.dotProduct(verticalNormal);
+			
+		}
+		
+		/**
+		 * Returns a vertex normal based upon uv coordinates.
+		 */
+		public function getNormalFromUV(u:Number, v:Number):Vector3D {
+			if (u >= 1) u = 0.99999;
+			if (v >= 1) v = 0.99999;
+			if (u <= 0) u = 0;
+			if (v <= 0) v = 0;
+			
+			var uPosition:Number = u * _visiblePoints;
+			var vPosition:Number = v * _visiblePoints;
+			var minXPos:uint = uint(uPosition);
+			var minYPos:uint = uint(_visiblePoints - vPosition);
+			
+			var normals:Vector.<Number> = this.geometry.subGeometries[0].vertexNormalData;
+			var sqrt:uint = Math.sqrt(normals.length / 3);
+			
+			var xyPosition:Point = new Point(minXPos, minYPos);
+			var xyPositionX3:Number = xyPosition.x * 3;
+			var xyPositionY3:Number = sqrt*xyPosition.y * 3;
+			var sqrt3:Number = sqrt * 3;
+			
+			var index1:uint = xyPosition.x * 3 + xyPositionY3; //current index
+			var index2:uint = (xyPosition.x + 1) * 3 + xyPositionY3; //index to the right
+			var index3:uint = xyPosition.x * 3 + xyPositionY3 + sqrt3; //index above
+			var index4:uint = (xyPosition.x + 1) * 3 + xyPositionY3 + sqrt3; //index above and to right
+			
+			var vec3D1x:Number = normals[index1];
+			var vec3D1y:Number = normals[index1 + 1];
+			var vec3D1z:Number = normals[index1 + 2];
+			var vec3D2x:Number = normals[index2];
+			var vec3D2y:Number = normals[index2 + 1];
+			var vec3D2z:Number = normals[index2 + 2];
+			var vec3D3x:Number = normals[index3];
+			var vec3D3y:Number = normals[index3 + 1];
+			var vec3D3z:Number = normals[index3 + 2];
+			var vec3D4x:Number = normals[index4];
+			var vec3D4y:Number = normals[index4 + 1];
+			var vec3D4z:Number = normals[index4 + 2];
+			
+			var uvXRatio:Number = 1 - (uPosition - Math.floor(uPosition));
+			var uvYRatio:Number = 1 - (vPosition - Math.floor(vPosition));
+			
+			var horizontalCrossVec1x:Number;
+			var horizontalCrossVec1y:Number;
+			var horizontalCrossVec1z:Number;
+			
+			
+			if (uvXRatio >= uvYRatio) { //x >= y triangle on right
+				horizontalCrossVec1x = vec3D2x + ((vec3D1x - vec3D2x) * uvXRatio) + ((vec3D4x - vec3D2x) * uvYRatio);
+				horizontalCrossVec1y = vec3D2y + ((vec3D1y - vec3D2y) * uvXRatio) + ((vec3D4y - vec3D2y) * uvYRatio);
+				horizontalCrossVec1z = vec3D2z + ((vec3D1z - vec3D2z) * uvXRatio) + ((vec3D4z - vec3D2z) * uvYRatio);
+			} else { //y > x triangle on left
+				horizontalCrossVec1x = vec3D2x + ((vec3D1x - vec3D2x) * uvXRatio) + ((vec3D4x - vec3D2x) * uvYRatio);
+				horizontalCrossVec1y = vec3D2y + ((vec3D1y - vec3D2y) * uvXRatio) + ((vec3D4y - vec3D2y) * uvYRatio);
+				horizontalCrossVec1z = vec3D2z + ((vec3D1z - vec3D2z) * uvXRatio) + ((vec3D4z - vec3D2z) * uvYRatio);
+			}
+			
+			var finalVerticalCrossVec:Vector3D = new Vector3D(horizontalCrossVec1x, horizontalCrossVec1y, horizontalCrossVec1z);
+			
+			return finalVerticalCrossVec;
+		}
+		
 		public function getHeightFromUV(u:Number, v:Number):Number {
 			
 			if (u >= 1) u = 0.99999;
