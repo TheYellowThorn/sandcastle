@@ -328,6 +328,8 @@ package com.terrainbuilder.objs.terrain
 		public function getHeightFromUV(u:Number, v:Number):Number {
 			
 			if (u >= 1) u = 0.99999;
+			if (v >= 1) v = 0.99999;
+			if (u <= 0) u = 0;
 			if (v <= 0) v = 0;
 			
 			var uPosition:Number = u * _visiblePoints;
