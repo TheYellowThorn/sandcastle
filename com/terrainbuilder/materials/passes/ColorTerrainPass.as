@@ -139,7 +139,7 @@ package com.terrainbuilder.materials.passes
 			_numUsedStreams = 3;	// vertex position, uv coords and normals
 			_numUsedTextures = _normalTextures.length + _compositeSplatTextures.length + _compositeBlendingTextures.length;//(Math.ceil(_splats.length / 3) + 1)* 2;	// splat and blending textures added
 			
-			_fragmentData = new Vector.<Number>(112, false);
+			_fragmentData = new Vector.<Number>(120, false);
 			
 			_vertexData = new Vector.<Number>(8);
 			updateVertexData();
@@ -381,8 +381,8 @@ package com.terrainbuilder.materials.passes
 			// simply set colour as output value
 			var code:String = "";
 			
-			var specularRegisters:uint = 1;
-			var terrainConstantIndex:uint = _terrainMethodData.numLights * 2 + specularRegisters; //diffuse + ambient
+			var specularRegisters:uint = 2;
+			var terrainConstantIndex:uint = _terrainMethodData.numLights * 3 + specularRegisters; //diffuse + ambient
 		
 			for (var i:uint = 0; i<_compositeSplatTextures.length; i++) {
 				
@@ -399,6 +399,10 @@ package com.terrainbuilder.materials.passes
 				code += "tex ft1, ft2, fs"+ (2*i+1).toString() +" <2d,linear,miplinear,wrap>\n"; //store blend texture
 				
 				var comps : Array = [ "x","y","z","w" ];
+				var comp:String;
+				var comp2:String;
+				var comp3:String;
+				var comp4:String;
 				
 				var coloredSplatStartIndex:uint = i * 3;
 				var coloredSplatEndIndex:uint = _coloredSplatDatas.length - coloredSplatStartIndex > 3 ? 3 : _coloredSplatDatas.length;
@@ -415,15 +419,12 @@ package com.terrainbuilder.materials.passes
 						}
 					}
 					
-					var comp:String = comps[j % 3];
-					var colorRegister:String = "fc" + (i + (terrainConstantIndex + 7)).toString();
+					comp = comps[j % 3];
+					var colorRegister:String = "fc" + (3 * i + (j % 3) + (terrainConstantIndex + 7)).toString();
 
 					code += "mov ft2.xyz, ft0." + comp + comp + comp + "\n";
-					code += "mov ft3.xyz, " + colorRegister + "." + comp + comp + comp + "\n";
 					
-					code += "mul ft3.xyz, ft3.xyz, fc" + (terrainConstantIndex + 1).toString() + ".xyz\n";
-					code += "frc ft3.xyz, ft3.xyz\n";
-					code += "mul ft3.xyz, ft3.xyz, fc" + (terrainConstantIndex).toString() + ".yyy\n";
+					code += "mov ft3.xyz, " + colorRegister + ".xyz\n";
 					
 					code += "mul ft2.xyz, ft2.xyz, ft3.xyz\n"; //SATURATE WITH COLOR
 					code += "add ft2.xyz, ft2.xyz, ft3.xyz\n"; //SATURATE WITH COLOR
@@ -434,9 +435,12 @@ package com.terrainbuilder.materials.passes
 						code += "sub ft2.xyz, ft2.xyz, ft5.xyz\n";
 					}
 					
-					var currLowHeightRegister:String = "fc" + (i + (terrainConstantIndex + 10)).toString();
-					var currHighHeightRegister:String = "fc" + (i + (terrainConstantIndex + 13)).toString();
-					var currSlopeRegister:String = "fc" + (i + (terrainConstantIndex + 16)).toString();
+					var currLowHeightRegister:String = "fc" + (uint(i / 3) + (terrainConstantIndex + 13)).toString();
+					var currHighHeightRegister:String = "fc" + (uint(i / 3) + (terrainConstantIndex + 16)).toString();
+					var currSlopeRegister:String = "fc" + (uint(i / 2) + (terrainConstantIndex + 19)).toString();
+					
+					comp2 = comps[2 * j % 4];
+					comp3 = comps[2 * j % 4 + 1];
 					
 					if (_coloredSplatDatas[j].useSlopeBlend == true) { 
 						
@@ -444,17 +448,15 @@ package com.terrainbuilder.materials.passes
 						code += "mov ft4.xyz, fc" + (terrainConstantIndex + 3).toString() + ".yzy\n";
 						code += "dp3 ft4.w, v1.xyz, ft4.xyz\n"; //RETURNS THE PERCENTAGE OF THE ANGLE BETWEEN 0 and 1
 						
-						code += "mov ft4.xz, " + currSlopeRegister + "." + comp + comp + "\n";
-						code += "mul ft4.xz, ft4.xz, fc" + (terrainConstantIndex + 1).toString() + ".xz\n";
-						code += "frc ft4.xz, ft4.xz\n";
+						code += "mov ft4.xy, " + currSlopeRegister + "." + comp2 + comp3 + "\n";
 						
 						code += "sub ft4.w, ft4.w, ft4.x\n";
-						code += "div ft4.w, ft4.w, ft4.z\n"; //MULTIPLY BY INVERSE OF DIFFERENCE TO EXPAND RANGE
+						code += "div ft4.w, ft4.w, ft4.y\n"; //MULTIPLY BY INVERSE OF DIFFERENCE TO EXPAND RANGE
 						code += "sat ft4.w, ft4.w\n";
 						code += "sub ft4.w, fc" + (terrainConstantIndex + 3).toString() + ".z, ft4.w\n";
 						
 						code += "mul " + "ft1." + comp + ", "  + "ft1." + comp + ", ft4.w\n"; //MULTIPY BLEND BY VISIBLE HEIGHTMAP COLOR
-
+						
 					}
 					if (_heightMapSplatRanges[j]) {
 						
@@ -467,9 +469,7 @@ package com.terrainbuilder.materials.passes
 						code += "mul " + "ft1." + comp + ", "  + "ft1." + comp + ", ft3.w\n"; //MULTIPY BLEND BY VISIBLE HEIGHTMAP COLOR
 						
 					}
-					
-					
-					
+
 					if (j == 0) {
 						
 						code += "mul ft2.xyz, ft2.xyz, " + "ft1." + comp + "\n";
@@ -489,12 +489,8 @@ package com.terrainbuilder.materials.passes
 							code += "add ft6.xyz, ft6.xyz, ft7.xyz\n";
 							code += "add ft6.w, ft6.w, " + "ft1." + comp + "\n"; //ADD ALPHAS FOR CORRECT OVERLAP
 						}
-					}
-					
-						
-				}
-					
-				
+					}	
+				}	
 			}
 			
 			code += "mov ft0, ft5\n";
@@ -505,16 +501,14 @@ package com.terrainbuilder.materials.passes
 				code += "sub ft6.xy, ft6.xy, fc" + (terrainConstantIndex + 1).toString() + ".ww\n";
 				code += "sub ft6.z, ft6.z, fc" + (terrainConstantIndex + 1).toString() + ".w\n";
 				code += "nrm ft6.xyz, ft6.xyz\n";
-					
+				
 				code += "add ft2.xy, ft2.xy, ft6.xy\n";
 				code += "nrm ft2.xyz, ft2.xyz\n";
-					
-			} 
-			trace("USING LIGHTS: " + _terrainMethodData.useLights);
+			}
 			if (_terrainMethodData.useLights) {
 				
 				for (i = 0; i<_terrainMethodData.numLights; i++) {
-					var lightIndex:uint = i * 2 + specularRegisters;
+					var lightIndex:uint = i * 3 + specularRegisters;
 					comp = comps[i % 4];
 					code += "dp3 ft3." + comp + ", fc" + lightIndex + ".xyz, ft2.xyz\n"; // standard dot3 lambert shading: d = max(0, dot3(light, normal))
 					code += "max ft3." + comp + ", ft3." + comp + ", fc" + (terrainConstantIndex + 3).toString() + ".y\n";  // fc0.w contains 0, so this clamps to 0
@@ -522,10 +516,7 @@ package com.terrainbuilder.materials.passes
 					if (i == 0) { code += "mov ft5.xyz, ft0.xyz\n"; }
 					
 					//CALCULATE DIFFUSE
-					code += "mov ft4.xyz, fc" + (lightIndex).toString() + ".www\n";
-					code += "mul ft4.xyz, ft4.xyz, fc" + (terrainConstantIndex + 1).toString() + ".xyz\n";
-					code += "frc ft4.xyz, ft4.xyz\n";
-					code += "mul ft4.xyz, ft4.xyz, fc" + (terrainConstantIndex).toString() + ".y\n";
+					code += "mov ft4.xyz, fc" + (lightIndex + 1).toString() + ".xyz\n";
 					code += "mul ft4.xyz, ft4.xyz, fc" + (terrainConstantIndex + 2).toString() + ".x\n"; //Diffuse Strength
 					
 					code += "mul ft4.xyz, ft4.xyz, ft3." + comp + "\n";
@@ -534,22 +525,18 @@ package com.terrainbuilder.materials.passes
 					else { code += "mov ft1.xyz, ft5.xyz\n"; }
 					
 					code += "mul ft1.xyz, ft1.xyz, ft4.xyz\n";
-					code += "add ft1.xyz, ft1.xyz, fc" + (lightIndex + 1).toString() + ".xyz\n";
+					code += "add ft1.xyz, ft1.xyz, fc" + (lightIndex + 2).toString() + ".xyz\n";
 					
 					if (i == 0) { code += "mov ft0.xyz, ft1.xyz\n"; }
 					else {  code += "add ft0.xyz, ft0.xyz, ft1.xyz\n"; }
 					
 				}
-				
 				//START SPECULAR
 				lightIndex = 0 + specularRegisters;
 				code += "dp3 ft3.x, fc" + lightIndex + ".xyz, ft2.xyz\n"; // standard dot3 lambert shading: d = max(0, dot3(light, normal))
 				code += "sat ft3.x, ft3.x\n";
 				code += "pow ft3.x, ft3.x, fc0.x\n";
-				code += "mov ft2.xyz, fc0.www\n";
-				code += "mul ft2.xyz, ft2.xyz, fc" + (terrainConstantIndex + 1).toString() + ".xyz\n";
-				code += "frc ft2.xyz, ft2.xyz\n";
-				code += "mul ft2.xyz, ft2.xyz, fc" + (terrainConstantIndex).toString() + ".yyy\n";
+				code += "mov ft2.xyz, fc1.xyz\n";
 				code += "mul ft2.xyz, ft2.xyz, ft3.x\n";
 				code += "mul ft2.xyz, ft2.xyz, fc0.y\n";
 				code += "add ft0.xyz, ft0.xyz, ft2.xyz\n";
@@ -567,7 +554,6 @@ package com.terrainbuilder.materials.passes
 				code += "mul ft1.w, ft1.w, fc" + (terrainConstantIndex + 6).toString() + ".y					\n";
 				code += "sat ft1.w, ft1.w										\n";
 				
-				
 				code += "sub ft2.xyz, fc" + (terrainConstantIndex + 4).toString() + ".xyz, ft0.xyz\n"; 			// (fogColor- col)
 				code += "mul ft2.xyz, ft2.xyz, ft1.w					\n";			// (fogColor- col)*fogRatio
 				code += "add ft0.xyz, ft0.xyz, ft2.xyz\n"; 
@@ -578,7 +564,7 @@ package com.terrainbuilder.materials.passes
 			// END FOG SHADER 
 			
 			code += "mov oc, ft0\n";
-		
+			
 			return code;
 		}
 
@@ -648,12 +634,17 @@ package com.terrainbuilder.materials.passes
 			
 			// expect a directional light to be assigned
 			var specularIndex:uint = 0;
-			var specularRegisters:uint = 1;
+			var specularRegisters:uint = 2;
 			
 			_fragmentData[specularIndex + 0] = _terrainMethodData.gloss;
 			_fragmentData[specularIndex + 1] = _terrainMethodData.specular;
 			_fragmentData[specularIndex + 2] = 0;
 			_fragmentData[specularIndex + 3] = ((_terrainMethodData.specularColor >> 16) & 0xFF) * 1000000 + ((_terrainMethodData.specularColor >> 8) & 0xFF) * 1000 + (_terrainMethodData.specularColor & 0xFF);
+			
+			_fragmentData[lightIndex + 4] = ((_terrainMethodData.specularColor >> 16) & 0xFF) / 256;
+			_fragmentData[lightIndex + 5] = ((_terrainMethodData.specularColor >> 8) & 0xFF) / 256;
+			_fragmentData[lightIndex + 6] = (_terrainMethodData.specularColor & 0xFF) / 256;
+			_fragmentData[lightIndex + 7] = 0;
 			
 			var light1:DirectionalLight;
 			
@@ -666,20 +657,25 @@ package com.terrainbuilder.materials.passes
 				var objectSpaceDir:Vector3D = renderable.inverseSceneTransform.transformVector(light.direction);
 				objectSpaceDir.normalize();
 				
-				var lightIndex:uint = i * 8 + (specularRegisters * 4);
+				var lightIndex:uint = i * 12 + (specularRegisters * 4);
 				_fragmentData[lightIndex + 0] = -objectSpaceDir.x;
 				_fragmentData[lightIndex + 1] = -objectSpaceDir.y;
 				_fragmentData[lightIndex + 2] = -objectSpaceDir.z;
 				_fragmentData[lightIndex + 3] = ((light.color >> 16) & 0xFF) * 1000000 + ((light.color >> 8) & 0xFF) * 1000 + (light.color & 0xFF);
 				
-				_fragmentData[lightIndex + 4] = ((_terrainMethodData.ambientColor >> 16) & 0xff)/0xff * _terrainMethodData.ambient * ((light.ambientColor >> 16) & 0xFF)/0xff * light.ambient;
-				_fragmentData[lightIndex + 5] = ((_terrainMethodData.ambientColor >> 8) & 0xff)/0xff * _terrainMethodData.ambient * ((light.ambientColor >> 8) & 0xFF)/0xff * light.ambient;
-				_fragmentData[lightIndex + 6] = (_terrainMethodData.ambientColor & 0xff)/0xff * _terrainMethodData.ambient * (light.ambientColor & 0xFF)/0xff * light.ambient;
-				_fragmentData[lightIndex + 7] = _terrainMethodData.normalMapStrength;//0.5;
+				_fragmentData[lightIndex + 4] = ((light.color >> 16) & 0xFF) / 256;
+				_fragmentData[lightIndex + 5] = ((light.color >> 8) & 0xFF) / 256;
+				_fragmentData[lightIndex + 6] = (light.color & 0xFF) / 256;
+				_fragmentData[lightIndex + 7] = 0;
+				
+				_fragmentData[lightIndex + 8] = ((_terrainMethodData.ambientColor >> 16) & 0xff)/0xff * _terrainMethodData.ambient * ((light.ambientColor >> 16) & 0xFF)/0xff * light.ambient;
+				_fragmentData[lightIndex + 9] = ((_terrainMethodData.ambientColor >> 8) & 0xff)/0xff * _terrainMethodData.ambient * ((light.ambientColor >> 8) & 0xFF)/0xff * light.ambient;
+				_fragmentData[lightIndex + 10] = (_terrainMethodData.ambientColor & 0xff)/0xff * _terrainMethodData.ambient * (light.ambientColor & 0xFF)/0xff * light.ambient;
+				_fragmentData[lightIndex + 11] = _terrainMethodData.normalMapStrength;//0.5;
 			}
 			
 			
-			var index:uint = _terrainMethodData.numLights*8 + (specularRegisters * 4);
+			var index:uint = _terrainMethodData.numLights*12 + (specularRegisters * 4);
 			
 			_fragmentData[index + 0] = _terrainMethodData.tileData;
 			_fragmentData[index + 1] = 1000 / 0xFF;
@@ -719,9 +715,9 @@ package com.terrainbuilder.materials.passes
 				var colInd:uint = i*3;
 				var addInd:uint = i*4;
 				
-				var splatRangStartIndex:uint = index + 40;
-				var splatRangEndIndex:uint = index + 52;
-				var splatSlopeIndex:uint = index + 64;
+				var splatRangStartIndex:uint = index + 52;
+				var splatRangEndIndex:uint = index + 64;
+				var splatSlopeIndex:uint = index + 76;
 				
 				var coloredSplatStartIndex:uint = i * 3;
 				var coloredSplatEndIndex:uint = _coloredSplatDatas.length - coloredSplatStartIndex > 3 ? 3 : _coloredSplatDatas.length;
@@ -734,11 +730,16 @@ package com.terrainbuilder.materials.passes
 					
 					if (colInd + j3 < _splatColors.length) {
 						
-						_fragmentData[startIndex + addInd + j3] = ((_splatColors[colInd + j3] >> 16) & 0xFF) * 1000000 + ((_splatColors[colInd + j3] >> 8) & 0xFF) * 1000 + (_splatColors[colInd + j3] & 0xFF) + ((_splatColors[colInd + j3] >> 24) & 0xFF)  / 1000;
-						
+						_fragmentData[startIndex + addInd + 8 * i + 4 * j3] = ((_splatColors[colInd + j3] >> 16) & 0xFF) / 256;
+						_fragmentData[startIndex + addInd + 8 * i + 4 * j3 + 1] = ((_splatColors[colInd + j3] >> 8) & 0xFF) / 256;
+						_fragmentData[startIndex + addInd + 8 * i + 4 * j3 + 2] = (_splatColors[colInd + j3] & 0xFF) / 256;
+						_fragmentData[startIndex + addInd + 8 * i + 4 * j3 + 3] = 0;
+
 						_fragmentData[splatRangStartIndex + addInd + j3] = _heightMapSplatRanges[colInd + j3][0] ? _heightMapSplatRanges[colInd + j3][0] / _terrainMethodData.maxHeight : 0;
 						_fragmentData[splatRangEndIndex + addInd + j3] = _heightMapSplatRanges[colInd + j3][1] ? _terrainMethodData.maxHeight / (_heightMapSplatRanges[colInd + j3][1] - _heightMapSplatRanges[colInd + j3][0]) : 0;
-						_fragmentData[splatSlopeIndex + addInd + j3] = roundDec(_coloredSplatDatas[colInd + j3].maxOpacityAngle, 2)*1000000000 + roundDec(_coloredSplatDatas[colInd + j3].opacityAngleSpreadRange, 2)*1000;
+						_fragmentData[splatSlopeIndex + addInd + 2 * (i + j3)] = _coloredSplatDatas[colInd + j3].maxOpacityAngle;
+						_fragmentData[splatSlopeIndex + addInd + 2 * (i + j3) + 1] = _coloredSplatDatas[colInd + j3].opacityAngleSpreadRange;
+
 						
 					}
 				}
