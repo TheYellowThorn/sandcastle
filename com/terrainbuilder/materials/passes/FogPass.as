@@ -75,6 +75,10 @@ package com.terrainbuilder.materials.passes
 			code += "m44 v2, vt0, vc4\n";
 			code += "mov v0, va1\n"; //uvs
 			
+			code += "mov vt0, va2\n"; // normals
+			code += "nrm vt0.xyz, vt0.xyz\n";
+			code += "mov v1, vt0\n"; // normals
+			
 			return code;
 		}
 
@@ -105,7 +109,7 @@ package com.terrainbuilder.materials.passes
 			code += "mul ft0.w, ft0.w, ft1.w\n";
 			
 			code += "mov oc, ft0\n";
-		
+			
 			return code;
 		}
 
