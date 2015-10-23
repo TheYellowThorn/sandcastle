@@ -7,8 +7,8 @@ accordance with the terms of the accompanying license agreement.
 */
 package com.terrainbuilder.objs.terrain
 {
-	import com.terrainbuilder.effects.WaterMaskMethod;
 	import com.terrainbuilder.dynamicterrain.utils.HeightMap16BitTools;
+	import com.terrainbuilder.effects.WaterMaskMethod;
 	import com.terrainbuilder.events.TerrainBlockEvent;
 	import com.terrainbuilder.tools.BitmapUtils;
 	
@@ -16,7 +16,6 @@ package com.terrainbuilder.objs.terrain
 	import flash.display.BitmapDataChannel;
 	import flash.display.Stage;
 	import flash.display.StageQuality;
-	import flash.events.EventDispatcher;
 	import flash.events.ProgressEvent;
 	import flash.geom.Point;
 	import flash.geom.Rectangle;
@@ -44,7 +43,7 @@ package com.terrainbuilder.objs.terrain
 		private var _hasWater:Boolean = false;
 		public var heightMap16BitTools:HeightMap16BitTools = new HeightMap16BitTools();
 		public var waterMaskMethod:WaterMaskMethod;
-		public var eventDispatcher:EventDispatcher = new EventDispatcher();
+		public var eventDispatcher:TerrainBlockDispatcher = new TerrainBlockDispatcher();
 		private var _waterHeight:uint;
 		private var progressEvent:ProgressEvent;
 		private var _usePerlinNoise:Boolean;
@@ -70,6 +69,7 @@ package com.terrainbuilder.objs.terrain
 			_tilesWide = tilesWide;
 			_tilesHigh = tilesHigh;
 			
+			eventDispatcher.parent = this;
 			eventDispatcher.addEventListener(TerrainBlockEvent.ON_ELEVATION_COMPLETE, onElevationComplete);
 			eventDispatcher.addEventListener(TerrainBlockEvent.ON_WATER_ELEVATION_COMPLETE, onWaterElevationComplete);
 			
