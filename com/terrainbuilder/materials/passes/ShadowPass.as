@@ -7,11 +7,15 @@ accordance with the terms of the accompanying license agreement.
 */
 package com.terrainbuilder.materials.passes
 {	
+	import com.terrainbuilder.events.ShadowPassEvent;
+	
+	import flash.display.BitmapData;
 	import flash.display3D.Context3D;
 	import flash.display3D.Context3DBlendFactor;
 	import flash.display3D.Context3DCompareMode;
 	import flash.display3D.Context3DProgramType;
 	import flash.events.Event;
+	import flash.events.EventDispatcher;
 	import flash.geom.Matrix3D;
 	
 	import away3d.arcane;
@@ -24,6 +28,7 @@ package com.terrainbuilder.materials.passes
 	import away3d.lights.shadowmaps.DirectionalShadowMapper;
 	import away3d.lights.shadowmaps.ShadowMapperBase;
 	import away3d.materials.passes.MaterialPassBase;
+	import away3d.textures.BitmapTexture;
 
 	use namespace arcane;
 
@@ -49,6 +54,15 @@ package com.terrainbuilder.materials.passes
 		private var _depthMapCoordVaryings:Vector.<String>;
 		private var _cascadeProjections:Vector.<String>;
 		private var _textureSampleType:String = "nearest";
+		
+		// low quality uses hard shadow method (fewer texture calls), high uses filtered shadow method.
+		private var _shadowType:String = ShadowType.FILTERED;
+		private var _shadowQuality:String = ShadowQuality.LOW;
+		private var _ditherSamples:uint = 1;
+		private var _range:Number = 1;
+		private static var _grainTexture:BitmapTexture;
+		private static var _grainBitmapData:BitmapData;
+		public var eventDispatcher:EventDispatcher = new EventDispatcher();
 		
 		public function ShadowPass(castingLight:LightBase)
 		{
@@ -180,64 +194,188 @@ package com.terrainbuilder.materials.passes
 			code += "sub " + targetReg + ".w, " + decReg + ".x, " + targetReg + ".w\n"; //1 - alpha = shadow
 			
 			code += "mov oc, " + targetReg + "\n";
-		
+		trace("ALL CODE: " + code);
 			return code;
 			
 		}
 		
-		protected function activateForCascade():void
+		protected function activateForCascade(stage3DProxy : Stage3DProxy):void
 		{
 			var size:int = _castingLight.shadowMapper.depthMapSize;
 			var index:int = 8;
 			var data:Vector.<Number> = _fragmentData;
-			data[index] = size;
-			data[index + 1] = 1/size;
+			
+			if (_shadowType == ShadowType.DITHERED) {
+				
+				data[index] = 1/_ditherSamples;
+				data[index + 1] = (stage3DProxy.width - 1)/63;
+				data[index + 2] = (stage3DProxy.height - 1)/63;
+				data[index + 3] = 2*_range/size;
+				stage3DProxy._context3D.setTextureAt(1, _grainTexture.getTextureForStage3D(stage3DProxy));
+			} else {
+				data[index] = size;
+				data[index + 1] = 1/size;
+			}
 			
 		}
 		
 		private function getCascadeFragmentCode(decodeRegister:String, depthTexture:String, depthProjection:String, targetReg:String):String
 		{
 			
-			
 			var code:String = "";
 			var dataReg:String = "fc1";
 			var tempString:String = "ft1";
 			var predicate:String = "ft3";
+			var depthReg:String = "fc2";
 			
-			code += "tex " + tempString + ", " + depthProjection + ", " + depthTexture + " <2d, " + _textureSampleType + ", clamp>\n";// +
-			
-			code += "dp4 " + tempString + ".z, " + tempString + ", " + decodeRegister + "\n";
-			code += "slt " + predicate + ".x, " + depthProjection + ".z, " + tempString + ".z\n";
-			
-			code += "add " + depthProjection + ".x, " + depthProjection + ".x, " + dataReg + ".y\n";
-			code += "tex " + tempString + ", " + depthProjection + ", " + depthTexture + " <2d, " + _textureSampleType + ", clamp>\n";
-			code += "dp4 " + tempString + ".z, " + tempString + ", " + decodeRegister + "\n";
-			code += "slt " + predicate + ".z, " + depthProjection + ".z, " + tempString + ".z\n";
-			
-			code += "add " + depthProjection + ".y, " + depthProjection + ".y, " + dataReg + ".y\n";
-			code += "tex " + tempString + ", " + depthProjection + ", " + depthTexture + " <2d, " + _textureSampleType + ", clamp>\n";
-			code += "dp4 " + tempString + ".z, " + tempString + ", " + decodeRegister + "\n";
-			code += "slt " + predicate + ".w, " + depthProjection + ".z, " + tempString + ".z\n";
-			
-			code += "sub " + depthProjection + ".x, " + depthProjection + ".x, " + dataReg + ".y\n";
-			code += "tex " + tempString + ", " + depthProjection + ", " + depthTexture + " <2d, " + _textureSampleType + ", clamp>\n";
-			code += "dp4 " + tempString + ".z, " + tempString + ", " + decodeRegister + "\n";
-			code += "slt " + predicate + ".y, " + depthProjection + ".z, " + tempString + ".z\n";
-			
-			code += "mul " + tempString + ".xy, " + depthProjection + ".xy, " + dataReg + ".x\n";
-			code += "frc " + tempString + ".xy, " + tempString + ".xy\n";
-			
-			// some strange register juggling to prevent agal bugging out
-			code += "sub " + depthProjection + ", " + predicate + ".xyzw, " + predicate + ".zwxy\n";
-			code += "mul " + depthProjection + ", " + depthProjection + ", " + tempString + ".x\n";
-			
-			code += "add " + predicate + ".xy, " + predicate + ".xy, " + depthProjection + ".zw\n";
-			
-			code += "sub " + predicate + ".y, " + predicate + ".y, " + predicate + ".x\n";
-			code += "mul " + predicate + ".y, " + predicate + ".y, " + tempString + ".y\n";
-			code += "add " + targetReg + ".w, " + predicate + ".x, " + predicate + ".y\n";
-		
+			if (_shadowType == ShadowType.DITHERED) {
+				code += getSampleCode(depthProjection, depthReg, depthTexture, decodeRegister, targetReg);
+			} else {
+				code += "tex " + tempString + ", " + depthProjection + ", " + depthTexture + " <2d, " + _textureSampleType + ", clamp>\n";// +
+				
+				code += "dp4 " + tempString + ".z, " + tempString + ", " + decodeRegister + "\n";
+				
+				if (_shadowQuality == ShadowQuality.LOW) {
+					code += "slt " + targetReg + ".w, " + depthProjection + ".z, " + tempString + ".z\n";
+				} else {
+					code += "slt " + predicate + ".x, " + depthProjection + ".z, " + tempString + ".z\n";
+					
+					code += "add " + depthProjection + ".x, " + depthProjection + ".x, " + dataReg + ".y\n";
+					code += "tex " + tempString + ", " + depthProjection + ", " + depthTexture + " <2d, " + _textureSampleType + ", clamp>\n";
+					code += "dp4 " + tempString + ".z, " + tempString + ", " + decodeRegister + "\n";
+					code += "slt " + predicate + ".z, " + depthProjection + ".z, " + tempString + ".z\n";
+					
+					code += "add " + depthProjection + ".y, " + depthProjection + ".y, " + dataReg + ".y\n";
+					code += "tex " + tempString + ", " + depthProjection + ", " + depthTexture + " <2d, " + _textureSampleType + ", clamp>\n";
+					code += "dp4 " + tempString + ".z, " + tempString + ", " + decodeRegister + "\n";
+					code += "slt " + predicate + ".w, " + depthProjection + ".z, " + tempString + ".z\n";
+					
+					code += "sub " + depthProjection + ".x, " + depthProjection + ".x, " + dataReg + ".y\n";
+					code += "tex " + tempString + ", " + depthProjection + ", " + depthTexture + " <2d, " + _textureSampleType + ", clamp>\n";
+					code += "dp4 " + tempString + ".z, " + tempString + ", " + decodeRegister + "\n";
+					code += "slt " + predicate + ".y, " + depthProjection + ".z, " + tempString + ".z\n";
+					
+					code += "mul " + tempString + ".xy, " + depthProjection + ".xy, " + dataReg + ".x\n";
+					code += "frc " + tempString + ".xy, " + tempString + ".xy\n";
+					
+					// some strange register juggling to prevent agal bugging out
+					code += "sub " + depthProjection + ", " + predicate + ".xyzw, " + predicate + ".zwxy\n";
+					code += "mul " + depthProjection + ", " + depthProjection + ", " + tempString + ".x\n";
+					
+					code += "add " + predicate + ".xy, " + predicate + ".xy, " + depthProjection + ".zw\n";
+					
+					code += "sub " + predicate + ".y, " + predicate + ".y, " + predicate + ".x\n";
+					code += "mul " + predicate + ".y, " + predicate + ".y, " + tempString + ".y\n";
+					code += "add " + targetReg + ".w, " + predicate + ".x, " + predicate + ".y\n";
+				}
+			}
 			return code;
+		}
+		
+		/**
+		 * Get the actual shader code for shadow mapping
+		 * @param regCache The register cache managing the registers.
+		 * @param depthMapRegister The texture register containing the depth map.
+		 * @param decReg The register containing the depth map decoding data.
+		 * @param targetReg The target register to add the shadow coverage.
+		 */
+		private function getSampleCode(depthProjection:String, customDataReg:String, depthMapRegister:String, decReg:String, targetReg:String):String
+		{
+			var code:String = "";
+			var grainRegister:String = "fs1";
+			var numSamples:int = _ditherSamples;
+			var temp:String = "ft3";
+			var uvReg:String = "ft1";
+			var _depthMapCoordReg:String = depthProjection;
+			var projectionReg:String = "v3";
+			
+			code += "div " + uvReg + ", " + projectionReg + ", " + projectionReg + ".w\n" +
+				"mul " + uvReg + ".xy, " + uvReg + ".xy, " + customDataReg + ".yz\n";
+			
+			while (numSamples > 0) {
+				if (numSamples == _ditherSamples)
+					code += "tex " + uvReg + ", " + uvReg + ", " + grainRegister + " <2d,nearest,repeat,mipnone>\n";
+				else
+					code += "tex " + uvReg + ", " + uvReg + ".zwxy, " + grainRegister + " <2d,nearest,repeat,mipnone>\n";
+				
+				// keep grain in uvReg.zw
+				code += "sub " + uvReg + ".zw, " + uvReg + ".xy, fc1.yy\n" + // uv-.5
+					"mul " + uvReg + ".zw, " + uvReg + ".zw, " + customDataReg + ".w\n"; // (tex unpack scale and tex scale in one)
+				
+				// first sample
+				
+				if (numSamples == _ditherSamples) {
+					// first sample
+					code += "add " + uvReg + ".xy, " + uvReg + ".zw, " + _depthMapCoordReg + ".xy\n" +
+						"tex " + temp + ", " + uvReg + ", " + depthMapRegister + " <2d,nearest,clamp,mipnone>\n" +
+						"dp4 " + temp + ".z, " + temp + ", " + decReg + "\n" +
+						"slt " + targetReg + ".w, " + _depthMapCoordReg + ".z, " + temp + ".z\n"; // 0 if in shadow
+				} else
+					code += addSample(uvReg, depthMapRegister, decReg, targetReg);
+				
+				if (numSamples > 4) {
+					code += "add " + uvReg + ".xy, " + uvReg + ".xy, " + uvReg + ".zw\n" +
+						addSample(uvReg, depthMapRegister, decReg, targetReg);
+				}
+				
+				if (numSamples > 1) {
+					code += "sub " + uvReg + ".xy, " + _depthMapCoordReg + ".xy, " + uvReg + ".zw\n" +
+						addSample(uvReg, depthMapRegister, decReg, targetReg);
+				}
+				
+				if (numSamples > 5) {
+					code += "sub " + uvReg + ".xy, " + uvReg + ".xy, " + uvReg + ".zw\n" +
+						addSample(uvReg, depthMapRegister, decReg, targetReg);
+				}
+				
+				if (numSamples > 2) {
+					code += "neg " + uvReg + ".w, " + uvReg + ".w\n"; // will be rotated 90 degrees when being accessed as wz
+					
+					code += "add " + uvReg + ".xy, " + uvReg + ".wz, " + _depthMapCoordReg + ".xy\n" +
+						addSample(uvReg, depthMapRegister, decReg, targetReg);
+				}
+				
+				if (numSamples > 6) {
+					code += "add " + uvReg + ".xy, " + uvReg + ".xy, " + uvReg + ".wz\n" +
+						addSample(uvReg, depthMapRegister, decReg, targetReg);
+				}
+				
+				if (numSamples > 3) {
+					code += "sub " + uvReg + ".xy, " + _depthMapCoordReg + ".xy, " + uvReg + ".wz\n" +
+						addSample(uvReg, depthMapRegister, decReg, targetReg);
+				}
+				
+				if (numSamples > 7) {
+					code += "sub " + uvReg + ".xy, " + uvReg + ".xy, " + uvReg + ".wz\n" +
+						addSample(uvReg, depthMapRegister, decReg, targetReg);
+				}
+				
+				numSamples -= 8;
+			}
+			
+			code += "mul " + targetReg + ".w, " + targetReg + ".w, " + customDataReg + ".x\n"; // average
+
+			return code;
+		}
+		
+		/**
+		 * Adds the code for another tap to the shader code.
+		 * @param uvReg The uv register for the tap.
+		 * @param depthMapRegister The texture register containing the depth map.
+		 * @param decReg The register containing the depth map decoding data.
+		 * @param targetReg The target register to add the tap comparison result.
+		 * @param regCache The register cache managing the registers.
+		 * @return
+		 */
+		private function addSample(uvReg:String, depthMapRegister:String, decReg:String, targetReg:String):String
+		{
+			var temp:String = "ft1";
+			var _depthMapCoordReg:String = "fc2";
+			
+			return "tex " + temp + ", " + uvReg + ", " + depthMapRegister + " <2d,nearest,clamp,mipnone>\n" +
+				"dp4 " + temp + ".z, " + temp + ", " + decReg + "\n" +
+				"slt " + temp + ".z, " + _depthMapCoordReg + ".z, " + temp + ".z\n" + // 0 if in shadow
+				"add " + targetReg + ".w, " + targetReg + ".w, " + temp + ".z\n";
 		}
 
 		/**
@@ -256,6 +394,17 @@ package com.terrainbuilder.materials.passes
 			
 			super.activate(stage3DProxy, camera);
 			
+			var data:Vector.<Number> = _fragmentData;
+			var size:int = _castingLight.shadowMapper.depthMapSize;
+			var index:int = 8;
+			if (_shadowType == ShadowType.DITHERED) {
+				data[index + 1] = (stage3DProxy.width - 1)/63;
+				data[index + 2] = (stage3DProxy.height - 1)/63;
+				data[index + 3] = 2*_range/size;
+				stage3DProxy._context3D.setTextureAt(1, _grainTexture.getTextureForStage3D(stage3DProxy));
+				
+			} 
+		
 		}
 		
 
@@ -294,7 +443,7 @@ package com.terrainbuilder.materials.passes
 			var numCascades:int = _shadowMapper is CascadeShadowMapper ? CascadeShadowMapper(_shadowMapper).numCascades : 1;
 			for (var i:uint = 0; i < numCascades; ++i) {
 				_fragmentData[uint(index + i)] = nearPlaneDistances[i];
-				activateForCascade();
+				activateForCascade(stage3DProxy);
 			}
 			
 			context.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 0, _fragmentData, uint(_fragmentData.length / 4));
@@ -338,8 +487,7 @@ package com.terrainbuilder.materials.passes
 			
 			context.setProgramConstantsFromVector(Context3DProgramType.VERTEX, 0, _vertexData);//
 			context.drawTriangles(renderable.getIndexBuffer(stage3DProxy), 0, renderable.numTriangles);
-			
-			
+
 		}
 
 		/**
@@ -355,6 +503,7 @@ package com.terrainbuilder.materials.passes
 			// clear the texture and stream we set before
 			// no need to clear attribute stream at slot 0, since it's always used
 			context.setTextureAt(0, null);
+			context.setTextureAt(1, null);
 			context.setVertexBufferAt(1, null);
 		}
 		
@@ -375,12 +524,105 @@ package com.terrainbuilder.materials.passes
 			invalidateShaderProgram();
 		}
 		
+		/**
+		 * Creates a texture containing the dithering noise texture.
+		 */
+		private function initGrainTexture():void
+		{
+			_grainBitmapData = new BitmapData(64, 64, false);
+			var size:int = _castingLight.shadowMapper.depthMapSize;
+			var vec:Vector.<uint> = new Vector.<uint>();
+			var len:uint = 4096;
+			var step:Number = 1/(size*_range);
+			var r:Number, g:Number;
+			
+			for (var i:uint = 0; i < len; ++i) {
+				r = 2*(Math.random() - .5);
+				g = 2*(Math.random() - .5);
+				if (r < 0)
+					r -= step;
+				else
+					r += step;
+				if (g < 0)
+					g -= step;
+				else
+					g += step;
+				if (r > 1)
+					r = 1;
+				else if (r < -1)
+					r = -1;
+				if (g > 1)
+					g = 1;
+				else if (g < -1)
+					g = -1;
+				vec[i] = (int((r*.5 + .5)*0xff) << 16) | (int((g*.5 + .5)*0xff) << 8);
+			}
+			
+			_grainBitmapData.setVector(_grainBitmapData.rect, vec);
+			_grainTexture = new BitmapTexture(_grainBitmapData);
+		}
+		
 		public function get textureSampleType():String { return _textureSampleType; }
 		public function set textureSampleType(value:String):void { 
 			if (value !== "linear") { value = "nearest"; }
 			_textureSampleType = value; 
 			invalidateShaderProgram();
 		}
+		
+		public function get shadowQuality():String { return _shadowQuality; }
+		public function set shadowQuality(value:String):void { 
+			if (value !== ShadowQuality.HIGH) { value = ShadowQuality.LOW; }
+			
+			if (value == ShadowQuality.LOW) {
+				_ditherSamples = 1;
+			}
+			_shadowQuality = value; 
+			
+			eventDispatcher.dispatchEvent(new ShadowPassEvent(ShadowPassEvent.SHADOW_QUALITY_CHANGED));
+			invalidateShaderProgram();
+		}
+		
+		public function get shadowType():String { return _shadowType; }
+		public function set shadowType(value:String):void {
+			if (value !== ShadowType.DITHERED) { value = ShadowType.FILTERED; }
+			
+			if (value == ShadowType.DITHERED) {
+				if (!_grainTexture) { initGrainTexture(); }
+			} else {
+				if (_grainTexture) {
+					_grainTexture.dispose();
+					_grainBitmapData.dispose();
+					_grainTexture = null;
+				}
+			}
+			if (value == ShadowType.DITHERED && _shadowQuality == ShadowQuality.LOW) {
+				_ditherSamples = 1;
+			}
+			_shadowType = value;
+			
+			eventDispatcher.dispatchEvent(new ShadowPassEvent(ShadowPassEvent.SHADOW_TYPE_CHANGED));
+			invalidateShaderProgram();
+		}
+		
+		public function get ditherSamples():uint { return _ditherSamples; }
+		public function set ditherSamples(value:uint):void { 
+			_ditherSamples = value; 
+
+			if (_ditherSamples < 1) { _ditherSamples = 1; }
+			else if (_ditherSamples > 24) {	_ditherSamples = 24; }
+			
+			if (_shadowType == ShadowType.DITHERED && _ditherSamples <= 1) {
+				this.shadowQuality = ShadowQuality.LOW;
+			}
+			invalidateShaderProgram();
+		}
+		
+		/**
+		 * The range in the shadow map in which to distribute the samples.
+		 */
+		public function get range():Number { return _range*2; }
+		public function set range(value:Number):void { _range = value/2; }
+	
 		
 	}
 }
