@@ -90,6 +90,13 @@ package com.terrainbuilder.objs.terrain
 			_elevationPoints = new Vector.<Point>();
 			_waterElevationPoints = new Vector.<Point>();
 			
+			_elevationData.waterHeight = _defaultWaterHeight;
+			
+			var r:uint = _defaultWaterHeight >> 8;
+			var g:uint = _defaultWaterHeight - r * 256;
+			var waterMapColor:uint = 0xFF << 24 | r << 16 | g << 8 | 0;
+			_elevationData.waterColor = waterMapColor;
+			
 			if (waterElevationData) { _hasWater = true; }
 			
 			
@@ -261,6 +268,8 @@ package com.terrainbuilder.objs.terrain
 				_waterElevationData.sharedWaterMaskBitmapData = _elevations[0].seamlessElevationData.sharedWaterMaskBitmapData;
 				
 				seamlessElevationData = _waterElevationData;
+				seamlessElevationData.waterHeight = _defaultWaterHeight;
+				seamlessElevationData.waterColor = waterMapColor;
 			}
 					
 			if (!(i == 0 && j == 0)) {  

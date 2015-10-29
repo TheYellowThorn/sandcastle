@@ -52,6 +52,7 @@ package com.terrainbuilder.objs.terrain
 		private var _waterHeight:Number;
 		private var _firstElevation:SeamlessElevation;
 		private var _lowestColor:Number;
+		private var _waterColor:uint;
 		
 		private var _baseIndicesList:Vector.<Vector.<uint>>;
 		private var _leftIndicesList:Vector.<Vector.<uint>>;
@@ -185,6 +186,8 @@ package com.terrainbuilder.objs.terrain
 		public function set sharedWaterMaskBitmapData(value:BitmapData):void { _sharedWaterMaskBitmapData = value; }
 		public function get waterHeight():Number { return _waterHeight; }
 		public function set waterHeight(value:Number):void { _waterHeight = value; }
+		public function get waterColor():Number { return _waterColor; }
+		public function set waterColor(value:Number):void { _waterColor = value; }
 		public function get firstElevation():SeamlessElevation { return _firstElevation; }
 		public function set firstElevation(value:SeamlessElevation):void { _firstElevation = value; }
 		public function get vertices():Vector.<Number> { return _vertices; }
